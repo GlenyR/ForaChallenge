@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="ForaChallenge.API/ForaChallenge.API.csproj" />
+  <Project Path="ForaChallenge.Application/ForaChallenge.Application.csproj" />
+  <Project Path="ForaChallenge.Domain/ForaChallenge.Domain.csproj" />
+  <Project Path="ForaChallenge.Infrastructure/ForaChallenge.Infrastructure.csproj" />
+  <Project Path="ForaChallenge.Persistence/ForaChallenge.Persistence.csproj" />
+</Solution>
