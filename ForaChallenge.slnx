@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Tests/">
+    <Project Path="ForaChallenge.Domain.Tests/ForaChallenge.Domain.Tests.csproj" />
+  </Folder>
   <Project Path="ForaChallenge.API/ForaChallenge.API.csproj" />
   <Project Path="ForaChallenge.Application/ForaChallenge.Application.csproj" />
   <Project Path="ForaChallenge.Domain/ForaChallenge.Domain.csproj" />
