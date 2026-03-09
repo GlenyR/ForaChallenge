@@ -13,6 +13,7 @@ public static class DependencyInjection
         services.AddScoped<ISecEdgarApiClient, SecEdgarApiClient>();
         services.AddScoped<IEdgarCompanyFactsMapper, EdgarCompanyFactsMapper>();
         services.AddScoped<IEdgarImportService, EdgarImportService>();
+        services.AddHostedService<EdgarImportHostedService>();
 
         return services;
     }
