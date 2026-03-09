@@ -1,4 +1,5 @@
-﻿using ForaChallenge.Application.Repositories;
+﻿using System.Net;
+using ForaChallenge.Application.Repositories;
 using ForaChallenge.Application.Services;
 using ForaChallenge.Domain.ValueObjects;
 using Microsoft.Extensions.Configuration;
@@ -7,26 +8,21 @@ using Microsoft.Extensions.Logging;
 
 namespace ForaChallenge.Infrastructure.Edgar;
 
-public class EdgarImportService : IEdgarImportService
+/// <summary>To count separately from retryable failures.</summary>
+internal sealed class CikMarkedAsExceptionException : Exception { }
+
+public class EdgarImportService(
+    IServiceScopeFactory scopeFactory,
+    ICikImportRepository cikImportRepository,
+    ILogger<EdgarImportService> logger,
+    IConfiguration configuration) : IEdgarImportService
 {
     private const int MinConcurrentRequests = 1;
 
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ICikImportRepository _cikImportRepository;
-    private readonly ILogger<EdgarImportService> _logger;
-    private readonly IConfiguration _configuration;
-
-    public EdgarImportService(
-        IServiceScopeFactory scopeFactory,
-        ICikImportRepository cikImportRepository,
-        ILogger<EdgarImportService> logger,
-        IConfiguration configuration)
-    {
-        _scopeFactory = scopeFactory;
-        _cikImportRepository = cikImportRepository;
-        _logger = logger;
-        _configuration = configuration;
-    }
+    private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
+    private readonly ICikImportRepository _cikImportRepository = cikImportRepository;
+    private readonly ILogger<EdgarImportService> _logger = logger;
+    private readonly IConfiguration _configuration = configuration;
 
     public async Task<EdgarImportResult> ProcessPendingAsync(CancellationToken cancellationToken = default)
     {
@@ -48,6 +44,7 @@ public class EdgarImportService : IEdgarImportService
         var semaphore = new SemaphoreSlim(maxConcurrent);
         var processed = 0;
         var failed = 0;
+        var exceptionCount = 0;
         var lockObj = new object();
 
         var tasks = pending.Select(async cikImport =>
@@ -57,6 +54,10 @@ public class EdgarImportService : IEdgarImportService
             {
                 await ProcessOneInNewScopeAsync(cikImport.Id, cikImport.Cik, cancellationToken);
                 lock (lockObj) { processed++; }
+            }
+            catch (CikMarkedAsExceptionException)
+            {
+                lock (lockObj) { exceptionCount++; }
             }
             catch (Exception ex)
             {
@@ -71,8 +72,8 @@ public class EdgarImportService : IEdgarImportService
 
         await Task.WhenAll(tasks);
 
-        _logger.LogInformation("EDGAR import finished: {Processed} processed, {Failed} failed.", processed, failed);
-        return new EdgarImportResult(processed, failed);
+        _logger.LogInformation("EDGAR import finished: {Processed} processed, {Failed} failed, {Exception} exception.", processed, failed, exceptionCount);
+        return new EdgarImportResult(processed, failed, exceptionCount);
     }
 
     private async Task ProcessOneInNewScopeAsync(int cikImportId, Cik cik, CancellationToken cancellationToken)
@@ -83,8 +84,24 @@ public class EdgarImportService : IEdgarImportService
         var companyRepo = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
         var cikRepo = scope.ServiceProvider.GetRequiredService<ICikImportRepository>();
 
-        var json = await apiClient.GetCompanyFactsAsync(cik, cancellationToken);
+        string json;
+        try
+        {
+            json = await apiClient.GetCompanyFactsAsync(cik, cancellationToken);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            await cikRepo.MarkAsExceptionAsync(cikImportId, "The specified key does not exist.", cancellationToken);
+            throw new CikMarkedAsExceptionException();
+        }
+
         var result = mapper.Map(json, cik);
+
+        if (string.IsNullOrWhiteSpace(result.Company.Name))
+        {
+            await cikRepo.MarkAsExceptionAsync(cikImportId, "Empty File", cancellationToken);
+            throw new CikMarkedAsExceptionException();
+        }
 
         await companyRepo.AddOrUpdateByCikAsync(result.Company, result.AnnualIncomes.Count > 0 ? result.AnnualIncomes : null, cancellationToken);
         await cikRepo.MarkAsProcessedAsync(cikImportId, DateTime.UtcNow, cancellationToken);

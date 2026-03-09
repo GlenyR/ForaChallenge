@@ -5,4 +5,4 @@ public interface IEdgarImportService
     Task<EdgarImportResult> ProcessPendingAsync(CancellationToken cancellationToken = default);
 }
 
-public sealed record EdgarImportResult(int ProcessedCount, int FailedCount);
+public sealed record EdgarImportResult(int ProcessedCount, int FailedCount, int ExceptionCount = 0);

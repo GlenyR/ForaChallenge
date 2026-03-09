@@ -104,7 +104,7 @@ public class FundingCalculatorTests
     [Fact]
     public void CalculateSpecialFundableAmount_When2022LessThan2021_Subtracts25Percent()
     {
-        var company = CompanyWithAllYears("Zebra Co", 1000, 1000, 1000, 1000, 500); // 2022 < 2021
+        var company = CompanyWithAllYears("Test Co", 1000, 1000, 1000, 1000, 500); // 2022 < 2021
         decimal standard = FundingCalculator.CalculateStandardFundableAmount(company);
         decimal expected = Math.Round(standard - standard * 0.25m, 2);
         Assert.Equal(expected, FundingCalculator.CalculateSpecialFundableAmount(company));
@@ -124,7 +124,7 @@ public class FundingCalculatorTests
     [Fact]
     public void CalculateSpecialFundableAmount_ResultNeverNegative()
     {
-        var company = CompanyWithAllYears("Echo Ltd", 100, 100, 100, 100, 1); // big decline
+        var company = CompanyWithAllYears("Test Ltd", 100, 100, 100, 100, 1); // big decline
         decimal special = FundingCalculator.CalculateSpecialFundableAmount(company);
         Assert.True(special >= 0);
     }
@@ -132,7 +132,7 @@ public class FundingCalculatorTests
     [Fact]
     public void Calculate_ReturnsFundableAmountValueObject_WithStandardAndSpecial()
     {
-        var company = CompanyWithAllYears("Beta Corp", 1000, 1000, 1000, 1000, 1000);
+        var company = CompanyWithAllYears("Test Corp", 1000, 1000, 1000, 1000, 1000);
         var result = FundingCalculator.Calculate(company);
         Assert.Equal(FundingCalculator.CalculateStandardFundableAmount(company), result.Standard.Value);
         Assert.Equal(FundingCalculator.CalculateSpecialFundableAmount(company), result.Special.Value);

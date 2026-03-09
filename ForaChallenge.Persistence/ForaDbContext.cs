@@ -52,6 +52,7 @@ public class ForaDbContext : DbContext
             e.Property(x => x.Status)
                 .HasConversion(s => (int)s, i => (CikImportStatus)i)
                 .IsRequired();
+            e.Property(x => x.Message).HasMaxLength(500);
         });
     }
 }

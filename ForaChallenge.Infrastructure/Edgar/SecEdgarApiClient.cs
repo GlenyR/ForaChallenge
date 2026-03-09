@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Net;
+using System.Net.Http.Headers;
 using ForaChallenge.Application.Services;
 using ForaChallenge.Domain.ValueObjects;
 using Microsoft.Extensions.Configuration;
@@ -28,6 +29,10 @@ public class SecEdgarApiClient : ISecEdgarApiClient
 
         var url = $"{baseUrl}/CIK{cik.Value}.json";
         var response = await client.GetAsync(url, cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            throw new HttpRequestException("The specified key does not exist.", null, HttpStatusCode.NotFound);
+
         response.EnsureSuccessStatusCode();
 
         return await response.Content.ReadAsStringAsync(cancellationToken);

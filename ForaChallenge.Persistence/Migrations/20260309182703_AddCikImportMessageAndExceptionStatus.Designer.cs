@@ -3,6 +3,7 @@ using System;
 using ForaChallenge.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ForaChallenge.Persistence.Migrations
 {
     [DbContext(typeof(ForaDbContext))]
-    partial class ForaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260309182703_AddCikImportMessageAndExceptionStatus")]
+    partial class AddCikImportMessageAndExceptionStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.3");

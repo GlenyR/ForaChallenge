@@ -3,5 +3,6 @@
 public enum CikImportStatus
 {
     Pending = 0,
-    Processed = 1
+    Processed = 1,
+    Exception = 2
 }
