@@ -1,5 +1,5 @@
 ﻿using ForaChallenge.Application.Services;
-using ForaChallenge.Infrastructure.SecEdgar;
+using ForaChallenge.Infrastructure.Edgar;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -11,6 +11,7 @@ public static class DependencyInjection
     {
         services.AddHttpClient("SecEdgar");
         services.AddScoped<ISecEdgarApiClient, SecEdgarApiClient>();
+        services.AddScoped<IEdgarCompanyFactsMapper, EdgarCompanyFactsMapper>();
 
         return services;
     }

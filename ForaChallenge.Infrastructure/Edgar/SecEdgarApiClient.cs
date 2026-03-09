@@ -3,7 +3,7 @@ using ForaChallenge.Application.Services;
 using ForaChallenge.Domain.ValueObjects;
 using Microsoft.Extensions.Configuration;
 
-namespace ForaChallenge.Infrastructure.SecEdgar;
+namespace ForaChallenge.Infrastructure.Edgar;
 
 public class SecEdgarApiClient : ISecEdgarApiClient
 {
