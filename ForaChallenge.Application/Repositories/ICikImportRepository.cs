@@ -13,5 +13,6 @@ public interface ICikImportRepository
     Task AddRangeAsync(IEnumerable<CikImport> cikImports, CancellationToken cancellationToken = default);
 
     Task<int> CountAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> GetExistingCikValuesAsync(CancellationToken cancellationToken = default);
 }
 

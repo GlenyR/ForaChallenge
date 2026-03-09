@@ -39,4 +39,9 @@ public class CikImportRepository : ICikImportRepository
     {
         return await _db.CikImports.CountAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<string>> GetExistingCikValuesAsync(CancellationToken cancellationToken = default)
+    {
+        return await _db.CikImports.AsNoTracking().Select(x => x.Cik.Value).ToListAsync(cancellationToken);
+    }
 }

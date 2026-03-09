@@ -1,5 +1,6 @@
 ﻿using ForaChallenge.Application.Services;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -7,16 +8,16 @@ namespace ForaChallenge.Infrastructure.Edgar;
 
 public class EdgarImportHostedService : IHostedService
 {
-    private readonly IEdgarImportService _importService;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<EdgarImportHostedService> _logger;
 
     public EdgarImportHostedService(
-        IEdgarImportService importService,
+        IServiceScopeFactory scopeFactory,
         IConfiguration configuration,
         ILogger<EdgarImportHostedService> logger)
     {
-        _importService = importService;
+        _scopeFactory = scopeFactory;
         _configuration = configuration;
         _logger = logger;
     }
@@ -33,7 +34,9 @@ public class EdgarImportHostedService : IHostedService
         _logger.LogInformation("Starting EDGAR import of pending CIKs (background).");
         try
         {
-            var result = await _importService.ProcessPendingAsync(cancellationToken);
+            using var scope = _scopeFactory.CreateScope();
+            var importService = scope.ServiceProvider.GetRequiredService<IEdgarImportService>();
+            var result = await importService.ProcessPendingAsync(cancellationToken);
             _logger.LogInformation("Startup EDGAR import completed: {Processed} processed, {Failed} failed.", result.ProcessedCount, result.FailedCount);
         }
         catch (Exception ex)

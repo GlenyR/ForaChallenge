@@ -1,4 +1,5 @@
 using ForaChallenge.Application.Repositories;
+using ForaChallenge.Application.Services;
 using ForaChallenge.Domain.Entities;
 using ForaChallenge.Domain.Enums;
 using ForaChallenge.Domain.ValueObjects;
@@ -12,6 +13,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddScoped<ICompaniesWithFundingService, CompaniesWithFundingService>();
+builder.Services.AddScoped<IAddCiksToQueueService, AddCiksToQueueService>();
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();

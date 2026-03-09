@@ -29,7 +29,7 @@ public class CompanyRepository : ICompanyRepository
     public async Task<Company?> GetByCikAsync(string cik, bool includeAnnualIncomes = false, CancellationToken cancellationToken = default)
     {
         var normalized = Domain.ValueObjects.Cik.From(cik);
-        var query = _db.Companies.AsNoTracking().Where(c => c.Cik.Value == normalized.Value);
+        var query = _db.Companies.AsNoTracking().Where(c => c.Cik == normalized);
         if (includeAnnualIncomes)
             query = query.Include(c => c.AnnualIncomes);
         return await query.FirstOrDefaultAsync(cancellationToken);
@@ -43,6 +43,35 @@ public class CompanyRepository : ICompanyRepository
                 company.AnnualIncomes.Add(income);
         }
         _db.Companies.Add(company);
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task AddOrUpdateByCikAsync(Company company, IReadOnlyList<CompanyAnnualIncome>? annualIncomes, CancellationToken cancellationToken = default)
+    {
+        var cik = company.Cik;
+        // Compare using value object so the value converter is used for the parameter (Cik -> string).
+        var existing = await _db.Companies.Include(c => c.AnnualIncomes).FirstOrDefaultAsync(c => c.Cik == cik, cancellationToken);
+
+        if (existing != null)
+        {
+            existing.Name = company.Name;
+            existing.AnnualIncomes.Clear();
+            if (annualIncomes != null)
+            {
+                foreach (var inc in annualIncomes)
+                    existing.AnnualIncomes.Add(new CompanyAnnualIncome { Year = inc.Year, Value = inc.Value });
+            }
+        }
+        else
+        {
+            if (annualIncomes != null && annualIncomes.Count > 0)
+            {
+                foreach (var income in annualIncomes)
+                    company.AnnualIncomes.Add(income);
+            }
+            _db.Companies.Add(company);
+        }
+
         await _db.SaveChangesAsync(cancellationToken);
     }
 }

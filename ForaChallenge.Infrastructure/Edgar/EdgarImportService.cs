@@ -1,7 +1,8 @@
 ﻿using ForaChallenge.Application.Repositories;
 using ForaChallenge.Application.Services;
-using ForaChallenge.Domain.Entities;
+using ForaChallenge.Domain.ValueObjects;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace ForaChallenge.Infrastructure.Edgar;
@@ -10,25 +11,19 @@ public class EdgarImportService : IEdgarImportService
 {
     private const int MinConcurrentRequests = 1;
 
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ICikImportRepository _cikImportRepository;
-    private readonly ICompanyRepository _companyRepository;
-    private readonly ISecEdgarApiClient _secEdgarApiClient;
-    private readonly IEdgarCompanyFactsMapper _mapper;
     private readonly ILogger<EdgarImportService> _logger;
     private readonly IConfiguration _configuration;
 
     public EdgarImportService(
+        IServiceScopeFactory scopeFactory,
         ICikImportRepository cikImportRepository,
-        ICompanyRepository companyRepository,
-        ISecEdgarApiClient secEdgarApiClient,
-        IEdgarCompanyFactsMapper mapper,
         ILogger<EdgarImportService> logger,
         IConfiguration configuration)
     {
+        _scopeFactory = scopeFactory;
         _cikImportRepository = cikImportRepository;
-        _companyRepository = companyRepository;
-        _secEdgarApiClient = secEdgarApiClient;
-        _mapper = mapper;
         _logger = logger;
         _configuration = configuration;
     }
@@ -60,7 +55,7 @@ public class EdgarImportService : IEdgarImportService
             await semaphore.WaitAsync(cancellationToken);
             try
             {
-                await ProcessOneAsync(cikImport, cancellationToken);
+                await ProcessOneInNewScopeAsync(cikImport.Id, cikImport.Cik, cancellationToken);
                 lock (lockObj) { processed++; }
             }
             catch (Exception ex)
@@ -80,12 +75,18 @@ public class EdgarImportService : IEdgarImportService
         return new EdgarImportResult(processed, failed);
     }
 
-    private async Task ProcessOneAsync(CikImport cikImport, CancellationToken cancellationToken)
+    private async Task ProcessOneInNewScopeAsync(int cikImportId, Cik cik, CancellationToken cancellationToken)
     {
-        var json = await _secEdgarApiClient.GetCompanyFactsAsync(cikImport.Cik, cancellationToken);
-        var result = _mapper.Map(json, cikImport.Cik);
+        using var scope = _scopeFactory.CreateScope();
+        var apiClient = scope.ServiceProvider.GetRequiredService<ISecEdgarApiClient>();
+        var mapper = scope.ServiceProvider.GetRequiredService<IEdgarCompanyFactsMapper>();
+        var companyRepo = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
+        var cikRepo = scope.ServiceProvider.GetRequiredService<ICikImportRepository>();
 
-        await _companyRepository.AddAsync(result.Company, result.AnnualIncomes.Count > 0 ? result.AnnualIncomes : null, cancellationToken);
-        await _cikImportRepository.MarkAsProcessedAsync(cikImport.Id, DateTime.UtcNow, cancellationToken);
+        var json = await apiClient.GetCompanyFactsAsync(cik, cancellationToken);
+        var result = mapper.Map(json, cik);
+
+        await companyRepo.AddOrUpdateByCikAsync(result.Company, result.AnnualIncomes.Count > 0 ? result.AnnualIncomes : null, cancellationToken);
+        await cikRepo.MarkAsProcessedAsync(cikImportId, DateTime.UtcNow, cancellationToken);
     }
 }
